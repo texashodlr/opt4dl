@@ -22,6 +22,7 @@ Algo behind SGD
 
 # Beginning with ScKit-Learn
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.datasets import fetch_california_housing
 from sklearn.linear_model import SGDRegressor
@@ -44,6 +45,69 @@ sgd_regressor.fit(X_train, y_train)
 y_pred = sgd_regressor.predict(X_test)
 
 mse = mean_squared_error(y_test, y_pred)
-print(f"MSE is: {mse}")
+print(f"SK_learn: MSE is: {mse}")
+
+# Hand-rolled Gradient Descent
+def gradient_descent(X, y, lr=0.01, epoch=1000):
+    m, b = 0.2, 0.2     # Parameters
+    log, mse = [], []   # Lists to store the learning process
+    N = len(X)          # Number of samples
+    for _ in range(epoch):
+        f = y - (m*X + b)
+        
+        # Updating m and b
+        m -= lr * (-2 * X.dot(f).sum() / N)
+        b -= lr * (-2 * f.sum() / N)
+        log.append((m,b))
+        mse.append(mean_squared_error(y, (m*X + b)))
+    return m, b, log, mse
 
 
+housing_data = california
+Features = pd.DataFrame(housing_data.data, columns=housing_data.feature_names)
+Target = pd.DataFrame(housing_data.target, columns=['Target'])
+df = Features.join(Target)
+df.corr()
+df[['MedInc', 'Target']].describe()[1:] #.style.highlight_max(axis=0)
+df = df[df.Target < 3.5]
+df = df[df.MedInc < 8]
+df[['MedInc', 'Target']].describe()[1:]
+def scale(x):
+    min = x.min()
+    max = x.max()
+    return pd.Series([(i - min)/(max - min) for i in x])
+
+X = scale(df.MedInc)
+y = scale(df.Target)
+
+X = df.MedInc
+y = df.Target
+m, b, log, mse = gradient_descent(X, y, lr=0.01, epoch=100)
+
+y_pred = m*X + b
+
+print(f"Manual MSE: {mean_squared_error(y,y_pred)}")
+
+# Running the SGD Iteration
+def run_sgd(X, y, lr=0.01, epoch=1000, batch_size=1):
+    m, b = 0.5, 0.5
+    log, mse = [], []
+    for _ in range(epoch):
+        indexes = np.random.randint(0, len(X), batch_size) # random sample
+        #print(f"Indexes: {indexes}")
+        Xs = np.take(a=X, indices=indexes, axis=0)
+        ys = np.take(a=y, indices=indexes, axis=0)
+        N = len(Xs)
+        
+        f = ys - (m*Xs + b)
+        
+        m -= lr * (-2 * Xs.dot(f).sum() / N)
+        b -= lr * (-2 * f.sum() / N)
+        log.append((m,b))
+        mse.append(mean_squared_error(y, (m*X + b)))
+    return m, b, log, mse
+
+m, b, log, mse = run_sgd(X, y, lr=0.01, epoch=100, batch_size=2)
+
+y_pred = m*X + b
+print(f"Manual SGD MSE: {mean_squared_error(y,y_pred)}")
