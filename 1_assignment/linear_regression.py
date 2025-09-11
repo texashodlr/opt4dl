@@ -55,4 +55,21 @@ def closed_form_ridge(X, y, l2=0.0):
     Xb = add_bias(X)
     d1 = Xb.shape[1]
     I = np.eye(d1); I[-1, -1] = 0.0
-    return np.linalg.sole(Xb.T @ Xb + l2 * I, Xb.T @ y)
+    return np.linalg.solve(Xb.T @ Xb + l2 * I, Xb.T @ y)
+
+def make_fake_data(n=1000, d=3, noise=0.1, seed=0):
+    rng = np.random.default_rng(seed)
+    # True weights (d features, and bias)
+    w_true = rng.normal(size=d)
+    b_true = rng.normal()
+    # Features
+    X = rng.normal(size=(n,d))
+    y = X @ w_true + b_true + noise * rng.normal(size=n)
+    return X, y, w_true, b_true
+
+# Initial Iteration
+X, y, w_true, b_true = make_fake_data()
+print("True weights:", w_true, "bias:", b_true)
+print("Shapes -> X:", X.shape, " y:", y.shape)
+w = sgd_linear_regression(X, y)
+print("SGD Weights: ", w)
