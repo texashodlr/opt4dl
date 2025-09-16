@@ -63,13 +63,15 @@ def run_proj_gd(w_init, eta=(1.0/(2.0*root_3)),eps=1e-10, eps_grad=1e-10, max_it
     return out, ws, Ls
 
 def main():
-    eta = float(1.0 / (2.0*root_3))
-    for w_init in [-0.9, -1.1, -1.0]:
-        run_proj_gd(w_init, eta=eta, eps=1e-10, eps_grad=1e-10, max_iter=100000)
+    eta_prime = float(1.0 / (2.0*root_3))
+    for eta in [0.01, 0.05, 0.1, 0.2, 0.3]:
+        print(f"\n### PGD RUN ETA: {eta}###")
+        for w_init in [-0.9, -1.1, -1.0]:
+            run_proj_gd(w_init, eta=eta, eps=1e-10, eps_grad=1e-10, max_iter=100000)
 
 main()
 
-# Output: 
+# Output with given eta (1.0/(2.0*root_3)): 
 """
 === PGD run (w0=-0.900000, eta=0.288675) ===
 Converged: True  in 36 iters
@@ -91,4 +93,124 @@ w_T = -1.000000000000
 L(w_T) = +0.666666666667
 |gradL(w_T)| = 0.000000e+00
 Hit boundary? False
+"""
+
+# Output with varied eta [0.01, 0.05, 0.1, 0.2, 0.3]:
+"""
+
+### PGD RUN ETA: 0.01###
+
+=== PGD run (w0=-0.900000, eta=0.010000) ===
+Converged: True  in 1358 iters
+w_T = +0.999999999951
+L(w_T) = -0.666666666667
+|gradL(w_T)| = 9.821854e-11
+Hit boundary? False
+
+=== PGD run (w0=-1.100000, eta=0.010000) ===
+Converged: True  in 89 iters
+w_T = -1.732050807569
+L(w_T) = +0.000000000000
+|gradL(w_T)| = 2.000000e+00
+Hit boundary? True
+
+=== PGD run (w0=-1.000000, eta=0.010000) ===
+Converged: True  in 1 iters
+w_T = -1.000000000000
+L(w_T) = +0.666666666667
+|gradL(w_T)| = 0.000000e+00
+Hit boundary? False
+
+### PGD RUN ETA: 0.05###
+
+=== PGD run (w0=-0.900000, eta=0.050000) ===
+Converged: True  in 263 iters
+w_T = +0.999999999952
+L(w_T) = -0.666666666667
+|gradL(w_T)| = 9.682188e-11
+Hit boundary? False
+
+=== PGD run (w0=-1.100000, eta=0.050000) ===
+Converged: True  in 20 iters
+w_T = -1.732050807569
+L(w_T) = +0.000000000000
+|gradL(w_T)| = 2.000000e+00
+Hit boundary? True
+
+=== PGD run (w0=-1.000000, eta=0.050000) ===
+Converged: True  in 1 iters
+w_T = -1.000000000000
+L(w_T) = +0.666666666667
+|gradL(w_T)| = 0.000000e+00
+Hit boundary? False
+
+### PGD RUN ETA: 0.1###
+
+=== PGD run (w0=-0.900000, eta=0.100000) ===
+Converged: True  in 126 iters
+w_T = +0.999999999953
+L(w_T) = -0.666666666667
+|gradL(w_T)| = 9.351142e-11
+Hit boundary? False
+
+=== PGD run (w0=-1.100000, eta=0.100000) ===
+Converged: True  in 11 iters
+w_T = -1.732050807569
+L(w_T) = +0.000000000000
+|gradL(w_T)| = 2.000000e+00
+Hit boundary? True
+
+=== PGD run (w0=-1.000000, eta=0.100000) ===
+Converged: True  in 1 iters
+w_T = -1.000000000000
+L(w_T) = +0.666666666667
+|gradL(w_T)| = 0.000000e+00
+Hit boundary? False
+
+### PGD RUN ETA: 0.2###
+
+=== PGD run (w0=-0.900000, eta=0.200000) ===
+Converged: True  in 57 iters
+w_T = +0.999999999955
+L(w_T) = -0.666666666667
+|gradL(w_T)| = 9.019607e-11
+Hit boundary? False
+
+=== PGD run (w0=-1.100000, eta=0.200000) ===
+Converged: True  in 7 iters
+w_T = -1.732050807569
+L(w_T) = +0.000000000000
+|gradL(w_T)| = 2.000000e+00
+Hit boundary? True
+
+=== PGD run (w0=-1.000000, eta=0.200000) ===
+Converged: True  in 1 iters
+w_T = -1.000000000000
+L(w_T) = +0.666666666667
+|gradL(w_T)| = 0.000000e+00
+Hit boundary? False
+
+### PGD RUN ETA: 0.3###
+
+=== PGD run (w0=-0.900000, eta=0.300000) ===
+Converged: True  in 34 iters
+w_T = +0.999999999974
+L(w_T) = -0.666666666667
+|gradL(w_T)| = 5.278311e-11
+Hit boundary? False
+
+=== PGD run (w0=-1.100000, eta=0.300000) ===
+Converged: True  in 5 iters
+w_T = -1.732050807569
+L(w_T) = +0.000000000000
+|gradL(w_T)| = 2.000000e+00
+Hit boundary? True
+
+=== PGD run (w0=-1.000000, eta=0.300000) ===
+Converged: True  in 1 iters
+w_T = -1.000000000000
+L(w_T) = +0.666666666667
+|gradL(w_T)| = 0.000000e+00
+Hit boundary? False
+
 """
