@@ -27,15 +27,13 @@ class BasicBlock(nn.Module):
         in_channels: int,
         out_channels: int,
         stride: int = 1,
-        expansion: int = 1,
-        downsample: nn.Module = None
+        expansion: int = 1
     ) -> None:
         super(BasicBlock, self).__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.stride = stride
         self.expansion = expansion
-        self.downsample = downsample
         self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=self.stride, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(out_channels)
         self.relu = nn.ReLU(inplace=True)
@@ -45,7 +43,6 @@ class BasicBlock(nn.Module):
         self.shortcut = nn.Sequential()
         
         if stride != 1 or in_channels != out_channels:
-            print(f"Short Cutting here!")
             self.shortcut = nn.Sequential(
                 nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=self.stride, bias=False),
                 nn.BatchNorm2d(out_channels)
@@ -102,23 +99,11 @@ class ResNet18(nn.Module):
         num_blocks: int,
         stride: int = 1
     ) -> nn.Sequential:
-        #downsample = None
         strides = [stride] + [1] * (num_blocks - 1)
         layers = []
         for stride in strides:
             layers.append(block(self.in_channels, out_channels, stride))
             self.in_channels = out_channels
-        """
-        layers.append(
-            block(
-                self.in_channels, 
-                out_channels, 
-                stride, 
-                self.expansion, downsample))
-        self.in_channels = out_channels * self.expansion
-        for i in range(1, num_blocks):
-            layers.append(block(self.in_channels, out_channels, expansion=self.expansion))
-        """
         return nn.Sequential(*layers)
         
     
@@ -134,11 +119,10 @@ class ResNet18(nn.Module):
         out = self.layer4(out)
 
         out = self.avgpool(out)
-        #out = torch.flatten(out, 1)
+
         out = out.view(out.size(0), -1)
         out = self.fc(out)
         return out
-    print(f" --- ResNet-18 successfully completed ---")
 
 # Section XX: Training the Model
 def train(model, trainloader, optimizer, criterion, device):
@@ -156,7 +140,10 @@ def train(model, trainloader, optimizer, criterion, device):
         # Forward pass
         outputs = model(image)
         # Calculate the loss
-        loss = criterion(outputs, labels)
+        # loss = criterion(outputs, labels) # --> Vanilla Loss with no L2 Reg.
+        # lambda_l2 = 0.00001
+        loss = criterion(outputs, labels) + 0.00001 * torch.sum(([p.pow(2).sum() for p in model.parameters() if p.requires_grad and p.dim() > 1 ]))
+
         train_running_loss += loss.item()
         # Calculate the accuracy
         _, preds = torch.max(outputs.data, 1)
@@ -263,13 +250,14 @@ parser.add_argument('--seed', type=int, default=63)
 parser.add_argument('--epochs', type=int, default=20)
 parser.add_argument('--batch_size', type=int, default=64)
 parser.add_argument('--learning_rate', type=float, default=0.001)
+parser.add_arguement('--weight_decay', type=float, default=0.0)
 args = vars(parser.parse_args())
 
 # Section XX: Setting training seeds
 torch.manual_seed(args['seed'])
 torch.cuda.manual_seed(args['seed'])
 torch.backends.cudnn.deterministic = True
-torch.backends.cudnn.benchmark = True
+torch.backends.cudnn.benchmark = False
 np.random.seed(args['seed'])
 random.seed(args['seed'])
 
@@ -289,7 +277,8 @@ total_trainable_params = sum(p.numel() for p in model.parameters() if p.requires
 print(f"{total_trainable_params:,} training parameters.")
 
 ## Optimizer
-optimizer = optim.SGD(model.parameters(), lr=args['learning_rate'])
+# optimizer = optim.SGD(model.parameters(), lr=args['learning_rate'])
+optimizer = optim.Adam(mode.parameters(), lr=args['learning_rate'], weight_decay=args['weight_decay'])
 
 ## Loss Function
 criterion = nn.CrossEntropyLoss()
