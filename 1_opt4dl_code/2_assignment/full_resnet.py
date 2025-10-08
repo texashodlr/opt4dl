@@ -17,6 +17,7 @@ import numpy as np
 import random
 import os
 
+plot_dir = os.path.join(os.getcwd())
 #plt.style.use('ggplot')
 
 # Section XX: BasicBlock Class Definition
@@ -239,7 +240,7 @@ def save_plots(train_acc, test_acc, train_loss, test_loss, name=None):
     plt.xlabel('Epochs')
     plt.ylabel('Accuracy')
     plt.legend()
-    plt.savefig(os.path.join('outputs', name+'_accuracy.png'))
+    plt.savefig(os.path.join(plot_dir, name+'_accuracy.png'))
     
     # Loss plots.
     plt.figure(figsize=(10, 7))
@@ -254,7 +255,7 @@ def save_plots(train_acc, test_acc, train_loss, test_loss, name=None):
     plt.xlabel('Epochs')
     plt.ylabel('Loss')
     plt.legend()
-    plt.savefig(os.path.join('outputs', name+'_loss.png'))
+    plt.savefig(os.path.join(plot_dir, name+'_loss.png'))
 
 # Section XX: User Input
 parser = argparse.ArgumentParser()
@@ -326,6 +327,6 @@ if __name__ == '__main__':
         test_acc,
         train_loss,
         test_loss,
-        name="OPT4DL: Conor Devlin ResNet-18 from Scratch" 
+        name="OPT4DL_Conor_Devlin_ResNet-18_from_Scratch" 
     )
     print('CONGRATS! TRAINING COMPLETE!')
