@@ -30,31 +30,35 @@ class BasicBlock(nn.Module):
         downsample: nn.Module = None
     ) -> None:
         super(BasicBlock, self).__init__()
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.stride = stride
         self.expansion = expansion
         self.downsample = downsample
-        self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=stride, padding=1, bias=False)
+        self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=self.stride, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(out_channels)
         self.relu = nn.ReLU(inplace=True)
         self.conv2 = nn.Conv2d(out_channels, out_channels*self.expansion, kernel_size=3, stride=1, padding=1, bias=False)
         self.bn2 = nn.BatchNorm2d(out_channels*self.expansion)
-        """
+        
         self.shortcut = nn.Sequential()
+        
         if stride != 1 or in_channels != out_channels:
+            print(f"Short Cutting here!")
             self.shortcut = nn.Sequential(
-                nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=stride, bias=False),
+                nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=self.stride, bias=False),
                 nn.BatchNorm2d(out_channels)
             )
-        """
+        
     def forward(self, x: Tensor) -> Tensor:
-        identity = x # Stores copy of input tensor
+        identity = x # Stores reference of input tensor
+        if self.stride != 1 or self.in_channels != self.out_channels:
+            identity = self.shortcut(x)
         out = self.conv1(x)
         out = self.bn1(out)
         out = self.relu(out)
         out = self.conv2(out)
         out = self.bn2(out)
-        # out += self.shortcut(out)
-        if self.downsample is not None:
-            identity = self.downsample(x)
         out += identity # Similar to shortcutting but it's __residual__!
         out = self.relu(out)
         return out
@@ -74,9 +78,9 @@ class ResNet18(nn.Module):
         self.conv1 = nn.Conv2d(
             in_channels=img_channels,
             out_channels=self.in_channels,
-            kernel_size=7, 
-            stride=2,
-            padding=3,
+            kernel_size=3, 
+            stride=1,
+            padding=1,
             bias=False
         )
         self.bn1 = nn.BatchNorm2d(self.in_channels)
@@ -97,9 +101,13 @@ class ResNet18(nn.Module):
         num_blocks: int,
         stride: int = 1
     ) -> nn.Sequential:
-        downsample = None
-        # strides = [stride] + [1] * (num_blocks - 1)
+        #downsample = None
+        strides = [stride] + [1] * (num_blocks - 1)
         layers = []
+        for stride in strides:
+            layers.append(block(self.in_channels, out_channels, stride))
+            self.in_channels = out_channels
+        """
         layers.append(
             block(
                 self.in_channels, 
@@ -109,7 +117,9 @@ class ResNet18(nn.Module):
         self.in_channels = out_channels * self.expansion
         for i in range(1, num_blocks):
             layers.append(block(self.in_channels, out_channels, expansion=self.expansion))
+        """
         return nn.Sequential(*layers)
+        
     
     def forward(self, x: Tensor) -> Tensor:
         out = self.conv1(x)
@@ -123,7 +133,8 @@ class ResNet18(nn.Module):
         out = self.layer4(out)
 
         out = self.avgpool(out)
-        out = torch.flatten(out, 1)
+        #out = torch.flatten(out, 1)
+        out = out.view(out.size(0), -1)
         out = self.fc(out)
         return out
     print(f" --- ResNet-18 successfully completed ---")
@@ -171,8 +182,6 @@ def test(model, testloader, criterion, device):
             image, labels = data
             image = image.to(device)
             labels = labels.to(device)
-            # optimizer.zero_grad()
-            # Forward pass
             outputs = model(image)
             # Calculate the loss
             loss = criterion(outputs, labels)
@@ -180,10 +189,6 @@ def test(model, testloader, criterion, device):
             # Calculate the accuracy
             _, preds = torch.max(outputs.data, 1)
             test_running_correct += (preds == labels).sum().item()
-            # Back propagation
-            loss.backward()
-            # Update the weights
-            optimizer.step()
     # Loss and acc for the completed epoch
     epoch_loss = test_running_loss / counter
     epoch_acc = 100. * (test_running_correct / len(testloader.dataset))
@@ -228,7 +233,7 @@ def save_plots(train_acc, test_acc, train_loss, test_loss, name=None):
         label='train accuracy'
     )
     plt.plot(
-        valid_acc, color='tab:red', linestyle='-', 
+        test_acc, color='tab:red', linestyle='-', 
         label='test accuracy'
     )
     plt.xlabel('Epochs')
@@ -243,7 +248,7 @@ def save_plots(train_acc, test_acc, train_loss, test_loss, name=None):
         label='train loss'
     )
     plt.plot(
-        valid_loss, color='tab:red', linestyle='-', 
+        test_loss, color='tab:red', linestyle='-', 
         label='test loss'
     )
     plt.xlabel('Epochs')
@@ -273,7 +278,7 @@ train_loader, test_loader = get_data(batch_size=args['batch_size'])
 
 # Section XX: Model Definition
 print('--- Training ResNet-18 from scratch ---')
-model = ResNet18(img_channels=3, num_layers=18, block=BasicBlock, num_classes=10).to(device)
+model = ResNet18(img_channels=1, num_layers=18, block=BasicBlock, num_classes=10).to(device)
 print(model)
 
 # Section XX: Parameter printing
