@@ -142,7 +142,7 @@ def train(model, trainloader, optimizer, criterion, device):
         # Calculate the loss
         # loss = criterion(outputs, labels) # --> Vanilla Loss with no L2 Reg.
         # lambda_l2 = 0.00001
-        loss = criterion(outputs, labels) + 0.00001 * torch.sum(([p.pow(2).sum() for p in model.parameters() if p.requires_grad and p.dim() > 1 ]))
+        loss = criterion(outputs, labels) + 0.00001 * torch.sum(torch.stack([p.pow(2).sum() for p in model.parameters() if p.requires_grad and p.dim() > 1 ]))
 
         train_running_loss += loss.item()
         # Calculate the accuracy
@@ -250,7 +250,7 @@ parser.add_argument('--seed', type=int, default=63)
 parser.add_argument('--epochs', type=int, default=20)
 parser.add_argument('--batch_size', type=int, default=64)
 parser.add_argument('--learning_rate', type=float, default=0.001)
-parser.add_arguement('--weight_decay', type=float, default=0.0)
+parser.add_argument('--weight_decay', type=float, default=0.0)
 args = vars(parser.parse_args())
 
 # Section XX: Setting training seeds
@@ -278,7 +278,7 @@ print(f"{total_trainable_params:,} training parameters.")
 
 ## Optimizer
 # optimizer = optim.SGD(model.parameters(), lr=args['learning_rate'])
-optimizer = optim.Adam(mode.parameters(), lr=args['learning_rate'], weight_decay=args['weight_decay'])
+optimizer = optim.Adam(model.parameters(), lr=args['learning_rate'], weight_decay=args['weight_decay'])
 
 ## Loss Function
 criterion = nn.CrossEntropyLoss()
