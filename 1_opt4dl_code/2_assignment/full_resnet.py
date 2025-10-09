@@ -1,5 +1,10 @@
 """
 Full implementation of ResNet-18 in Python from scratch
+Built from: 
+1. https://www.geeksforgeeks.org/deep-learning/resnet18-from-scratch-using-pytorch/
+2. https://debuggercafe.com/implementing-resnet18-in-pytorch-from-scratch/
+3. https://discuss.pytorch.org/t/how-to-add-a-l2-regularization-term-in-my-loss-function/17411
+4. https://stackoverflow.com/questions/71998978/early-stopping-in-pytorch
 """
 # Section 0: Imports
 import torch
@@ -18,9 +23,8 @@ import random
 import os
 
 plot_dir = os.path.join(os.getcwd())
-#plt.style.use('ggplot')
 
-# Section XX: BasicBlock Class Definition
+# Section 01: BasicBlock Class Definition
 class BasicBlock(nn.Module):
     def __init__(
         self,
@@ -61,7 +65,7 @@ class BasicBlock(nn.Module):
         out = self.relu(out)
         return out
 
-# Section XX: ResNet Class Definition
+# Section 02: ResNet Class Definition
 class ResNet18(nn.Module):
     def __init__(
         self,
@@ -124,7 +128,7 @@ class ResNet18(nn.Module):
         out = self.fc(out)
         return out
 
-# Section XX: Training the Model
+# Section 03: Training the Model
 def train(model, trainloader, optimizer, l2_lambda, criterion, device):
     model.train()
     print("--- Training the model ---")
@@ -144,7 +148,10 @@ def train(model, trainloader, optimizer, l2_lambda, criterion, device):
         # loss = criterion(outputs, labels) # --> Vanilla Loss with no L2 Reg.
 
         """ L2 Regularization with Adam"""
-        loss = criterion(outputs, labels) + l2_lambda * torch.sum(torch.stack([p.pow(2).sum() for p in model.parameters() if p.requires_grad and p.dim() > 1 ]))
+        # loss = criterion(outputs, labels) + l2_lambda * torch.sum(torch.stack([p.pow(2).sum() for p in model.parameters() if p.requires_grad and p.dim() > 1 ]))
+
+        """ Part B Weigth Decay with similiar Lambda """
+        loss = criterion(outputs, labels)
 
         train_running_loss += loss.item()
         # Calculate the accuracy
@@ -159,7 +166,7 @@ def train(model, trainloader, optimizer, l2_lambda, criterion, device):
     epoch_acc = 100. * (train_running_correct / len(trainloader.dataset))
     return epoch_loss, epoch_acc
     
-# Section XX: Testing the Model
+# Section 04: Testing the Model
 def test(model, testloader, criterion, device):
     model.eval()
     print("--- Testing the model ---")
@@ -184,7 +191,27 @@ def test(model, testloader, criterion, device):
     epoch_acc = 100. * (test_running_correct / len(testloader.dataset))
     return epoch_loss, epoch_acc
 
-# Section XX: Data Loading from Fashion-MNIST
+# Section 05: Early Stopping Class Definition
+class EarlyStopper:
+    def __init__(self, patience: int = 1, min_delta: float = 0.0):
+        self.patience = patience
+        self.min_delta = min_delta
+        self.counter = 0
+        self.min_validation_loss = float('inf')
+    
+    def early_stop(self, validation_loss):
+        if validation_loss < self.min_validation_loss:
+            self.min_validation_loss = validation_loss
+            self.counter = 0
+            print(f"+++ A new testing loss minimum has been achieved! +++")
+        elif validation_loss > (self.min_validation_loss + self.min_delta):
+            self.counter += 1
+            print(f"+++ A testing platuea has been hit, counter: {self.counter} +++")
+            if self.counter >= self.patience:
+                return True
+        return False
+
+# Section 06: Data Loading from Fashion-MNIST
 def get_data (batch_size=64):
     # Fashion-MNIST Data Set
     # https://github.com/zalandoresearch/fashion-mnist
@@ -214,7 +241,7 @@ def get_data (batch_size=64):
     )
     return train_loader, test_loader
 
-# Section XX: Plotter
+# Section 07: Plotter
 def save_plots(train_acc, test_acc, train_loss, test_loss, name=None):
     # Accuracy plots.
     plt.figure(figsize=(10, 7))
@@ -246,17 +273,17 @@ def save_plots(train_acc, test_acc, train_loss, test_loss, name=None):
     plt.legend()
     plt.savefig(os.path.join(plot_dir, name+'_loss.png'))
 
-# Section XX: User Input
+# Section 08: User Input
 parser = argparse.ArgumentParser()
 parser.add_argument('--seed', type=int, default=63)
 parser.add_argument('--epochs', type=int, default=20)
 parser.add_argument('--batch_size', type=int, default=64)
 parser.add_argument('--learning_rate', type=float, default=0.001)
 parser.add_argument('--weight_decay', type=float, default=0.0)
-parser.add_argument('--l2_lambda', type=float, default=0.00001)
+parser.add_argument('--l2_lambda', type=float, default=0.0)
 args = vars(parser.parse_args())
 
-# Section XX: Setting training seeds
+# Section 09: Setting training seeds
 torch.manual_seed(args['seed'])
 torch.cuda.manual_seed(args['seed'])
 torch.backends.cudnn.deterministic = True
@@ -264,16 +291,16 @@ torch.backends.cudnn.benchmark = False
 np.random.seed(args['seed'])
 random.seed(args['seed'])
 
-# Section XX: CUDA Device and Data Loading
+# Section 10: CUDA Device and Data Loading
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 train_loader, test_loader = get_data(batch_size=args['batch_size'])
 
-# Section XX: Model Definition
+# Section 11: Model Definition
 print('--- Training ResNet-18 from scratch ---')
 model = ResNet18(img_channels=1, num_layers=18, block=BasicBlock, num_classes=10).to(device)
 print(model)
 
-# Section XX: Parameter printing
+# Section 12: Parameter printing
 total_params = sum(p.numel() for p in model.parameters())
 print(f"{total_params:,} total parameters.")
 total_trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -283,12 +310,12 @@ print(f"{total_trainable_params:,} training parameters.")
 # optimizer = optim.SGD(model.parameters(), lr=args['learning_rate'])
 
 """ Adam (Q3/Part: [A,B,D] """
-optimizer = optim.Adam(model.parameters(), lr=args['learning_rate'], weight_decay=args['weight_decay'])
+# optimizer = optim.Adam(model.parameters(), lr=args['learning_rate'], weight_decay=args['weight_decay'])
 
 """ AdamW (Q3/Part: [C,D]) """
-# optimizer = optim.AdamW(model.parameters(), lr=args['learning_rate'], weight_decay=args['weight_decay'])
+optimizer = optim.AdamW(model.parameters(), lr=args['learning_rate'], weight_decay=args['weight_decay'])
 
-## Loss Function
+## Loss Function ## 
 criterion = nn.CrossEntropyLoss()
 
 if __name__ == '__main__':
@@ -296,6 +323,9 @@ if __name__ == '__main__':
     # Training losses and accuracies
     train_loss, test_loss = [], []
     train_acc, test_acc = [], []
+    #local_min_delta = args['l2_lambda'] * 0.01
+    local_min_delta = args['weight_decay'] * 0.01
+    early_stopper = EarlyStopper(patience=2, min_delta=local_min_delta)
 
     for epoch in range(args['epochs']):
         print(f"--- EPOCH: {epoch+1} of {args['epochs']}")
@@ -313,12 +343,21 @@ if __name__ == '__main__':
             criterion,
             device
         )
+        
         train_loss.append(train_epoch_loss)
         test_loss.append(test_epoch_loss)
         train_acc.append(train_epoch_acc)
         test_acc.append(test_epoch_acc)
+        
         print(f"Training loss: {train_epoch_loss:.3f}, training acc: {train_epoch_acc:.3f}")
         print(f"Testing loss: {test_epoch_loss:.3f}, test acc: {test_epoch_acc:.3f}")
+        print('-'*50)
+        
+        if early_stopper.early_stop(test_epoch_loss):
+            print(f"### Test loss has failed to decrease, stopping early! ###")
+            break
+        else:
+            print(f"### Test loss continues to decrease, not stopping early! ###")
         print('-'*50)
     save_plots(
         train_acc,
