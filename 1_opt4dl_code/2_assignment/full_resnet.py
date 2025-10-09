@@ -125,7 +125,7 @@ class ResNet18(nn.Module):
         return out
 
 # Section XX: Training the Model
-def train(model, trainloader, optimizer, criterion, device):
+def train(model, trainloader, optimizer, l2_lambda, criterion, device):
     model.train()
     print("--- Training the model ---")
     train_running_loss = 0.0
@@ -139,10 +139,12 @@ def train(model, trainloader, optimizer, criterion, device):
         optimizer.zero_grad()
         # Forward pass
         outputs = model(image)
-        # Calculate the loss
+
+        """ SGD LOSS """
         # loss = criterion(outputs, labels) # --> Vanilla Loss with no L2 Reg.
-        # lambda_l2 = 0.00001
-        loss = criterion(outputs, labels) + 0.00001 * torch.sum(torch.stack([p.pow(2).sum() for p in model.parameters() if p.requires_grad and p.dim() > 1 ]))
+
+        """ L2 Regularization with Adam"""
+        loss = criterion(outputs, labels) + l2_lambda * torch.sum(torch.stack([p.pow(2).sum() for p in model.parameters() if p.requires_grad and p.dim() > 1 ]))
 
         train_running_loss += loss.item()
         # Calculate the accuracy
@@ -251,6 +253,7 @@ parser.add_argument('--epochs', type=int, default=20)
 parser.add_argument('--batch_size', type=int, default=64)
 parser.add_argument('--learning_rate', type=float, default=0.001)
 parser.add_argument('--weight_decay', type=float, default=0.0)
+parser.add_argument('--l2_lambda', type=float, default=0.00001)
 args = vars(parser.parse_args())
 
 # Section XX: Setting training seeds
@@ -276,9 +279,14 @@ print(f"{total_params:,} total parameters.")
 total_trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
 print(f"{total_trainable_params:,} training parameters.")
 
-## Optimizer
+## Optimizer ##
 # optimizer = optim.SGD(model.parameters(), lr=args['learning_rate'])
+
+""" Adam (Q3/Part: [A,B,D] """
 optimizer = optim.Adam(model.parameters(), lr=args['learning_rate'], weight_decay=args['weight_decay'])
+
+""" AdamW (Q3/Part: [C,D]) """
+# optimizer = optim.AdamW(model.parameters(), lr=args['learning_rate'], weight_decay=args['weight_decay'])
 
 ## Loss Function
 criterion = nn.CrossEntropyLoss()
@@ -295,6 +303,7 @@ if __name__ == '__main__':
             model,
             train_loader,
             optimizer,
+            args['l2_lambda'],
             criterion,
             device
         )
