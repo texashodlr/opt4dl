@@ -8,13 +8,13 @@ Built from:
 """
 # Section 0: Imports
 import torch
+from torch import Tensor
 import torch.nn as nn
 import torch.optim as optim
-from torch import Tensor
-from typing import Type
 from torch.utils.data import DataLoader
 from torchvision import datasets
 from torchvision.transforms import ToTensor
+from typing import Type
 from tqdm import tqdm
 import argparse
 import matplotlib.pyplot as plt
@@ -38,30 +38,44 @@ class BasicBlock(nn.Module):
         self.out_channels = out_channels
         self.stride = stride
         self.expansion = expansion
-        self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=self.stride, padding=1, bias=False)
+        self.conv1 = nn.Conv2d(in_channels,
+                                out_channels, 
+                                kernel_size=3, 
+                                stride=self.stride, 
+                                padding=1, 
+                                bias=False)
         self.bn1 = nn.BatchNorm2d(out_channels)
         self.relu = nn.ReLU(inplace=True)
-        self.conv2 = nn.Conv2d(out_channels, out_channels*self.expansion, kernel_size=3, stride=1, padding=1, bias=False)
+        self.conv2 = nn.Conv2d(out_channels, 
+                               out_channels*self.expansion, 
+                               kernel_size=3, 
+                               stride=1, 
+                               padding=1, 
+                               bias=False)
         self.bn2 = nn.BatchNorm2d(out_channels*self.expansion)
         
         self.shortcut = nn.Sequential()
         
         if stride != 1 or in_channels != out_channels:
             self.shortcut = nn.Sequential(
-                nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=self.stride, bias=False),
+                nn.Conv2d(in_channels, 
+                          out_channels, 
+                          kernel_size=1, 
+                          stride=self.stride, 
+                          bias=False),
                 nn.BatchNorm2d(out_channels)
             )
         
     def forward(self, x: Tensor) -> Tensor:
-        identity = x # Stores reference of input tensor
+        identity = x                            # Stores reference of input tensor
         if self.stride != 1 or self.in_channels != self.out_channels:
-            identity = self.shortcut(x)
+            identity = self.shortcut(x)         # Tensor shape resizing check
         out = self.conv1(x)
         out = self.bn1(out)
         out = self.relu(out)
         out = self.conv2(out)
         out = self.bn2(out)
-        out += identity # Similar to shortcutting but it's __residual__!
+        out += identity                         # Residual Path
         out = self.relu(out)
         return out
 
@@ -112,18 +126,18 @@ class ResNet18(nn.Module):
         
     
     def forward(self, x: Tensor) -> Tensor:
+                                        # Input Stem
         out = self.conv1(x)
         out = self.bn1(out)
         out = self.relu(out)
         out = self.maxpool(out)
-
+                                        # Layer blocks
         out = self.layer1(out)
         out = self.layer2(out)
         out = self.layer3(out)
         out = self.layer4(out)
-
+                                        # Output 
         out = self.avgpool(out)
-
         out = out.view(out.size(0), -1)
         out = self.fc(out)
         return out
