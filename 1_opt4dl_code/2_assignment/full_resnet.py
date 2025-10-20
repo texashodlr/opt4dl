@@ -164,7 +164,7 @@ def train(model, trainloader, optimizer, l2_lambda, criterion, device):
         """ L2 Regularization with Adam"""
         # loss = criterion(outputs, labels) + l2_lambda * torch.sum(torch.stack([p.pow(2).sum() for p in model.parameters() if p.requires_grad and p.dim() > 1 ]))
 
-        """ Part B Weigth Decay with similiar Lambda """
+        """ Part B Weight Decay with similiar Lambda """
         loss = criterion(outputs, labels)
 
         train_running_loss += loss.item()
@@ -321,13 +321,13 @@ total_trainable_params = sum(p.numel() for p in model.parameters() if p.requires
 print(f"{total_trainable_params:,} training parameters.")
 
 ## Optimizer ##
-# optimizer = optim.SGD(model.parameters(), lr=args['learning_rate'])
+optimizer = optim.SGD(model.parameters(), lr=args['learning_rate'])
 
 """ Adam (Q3/Part: [A,B,D] """
 # optimizer = optim.Adam(model.parameters(), lr=args['learning_rate'], weight_decay=args['weight_decay'])
 
 """ AdamW (Q3/Part: [C,D]) """
-optimizer = optim.AdamW(model.parameters(), lr=args['learning_rate'], weight_decay=args['weight_decay'])
+# optimizer = optim.AdamW(model.parameters(), lr=args['learning_rate'], weight_decay=args['weight_decay'])
 
 ## Loss Function ## 
 criterion = nn.CrossEntropyLoss()
