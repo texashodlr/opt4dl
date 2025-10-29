@@ -2,53 +2,32 @@
 #include <math.h>
 #include <cuda_runtime.h>
 
+__global__ void vector_add(const float* A, const float* B, float* C, int N) {
+    int index = threadIdx.x + blockIdx.x * blockDim.x;
+    int stride = blockDim.x * gridDim.x;
 
-__global__ void matrix_multiplication_kernel(const float* A, const float* B, float* C, int M, int N, int K) {
-    int x = threadIdx.x + blockIdx.x * blockDim.x;
-    int y = threadIdx.y + blockIdx.y * blockDim.y;
-    float Pvalue = 0;
-    for(int k = 0; k < N; ++k){
-        Pvalue += A[y*N + k] * B[k*K + x];
+    for (int i = index; i < N; i+=stride){
+        C[i] = A[i] + B[i];
     }
-    C[y*K + x] = Pvalue;
+
 }
 
-
 int main(void){
-    int M = 8192;
-    int N = 6144;
-    int K = 4096;
-    // A = MxN
-    // B = NxK
-    // C = MxK
+    int N = 1 << 20;
     float* x, *y, *z;
-    cudaMallocManaged(&x, (M*N) * sizeof(float));
-    cudaMallocManaged(&y, (N*K) * sizeof(float));
-    cudaMallocManaged(&z, (M*K) * sizeof(float));
-
-    for(int i=0; i < M; i++){
-        for(int j=0; j < N; j++){
-            x[i*N + j] = j + i*M;
-        }
-    }
+    cudaMallocManaged(&x, N * sizeof(float));
+    cudaMallocManaged(&y, N * sizeof(float));
+    cudaMallocManaged(&z, N * sizeof(float));
 
     for(int i=0; i < N; i++){
-        for(int j=0; j < K; j++){
-            y[i*K + j] = j + i*N;
-        }
+        x[i] = 1.0f;
+        y[i] = 2.0f;
+        z[i] = 0.0f;
     }
 
-    for(int i=0; i < M; i++){
-        for(int j=0; j < K; j++){
-            z[i*K + j] = 0;
-        }
-    }
-
-    dim3 threadsPerBlock = (16, 16);
-    dim3 blocksPerGrid((K + threadsPerBlock.x - 1) / threadsPerBlock.x,
-                       (M + threadsPerBlock.y - 1) / threadsPerBlock.y);
-    matrix_multiplication_kernel<<<blocksPerGrid, threadsPerBlock>>>(x, y, z, M, N, K);
-
+    int threadsPerBlock = 256;
+    int blocksPerGrid = (N + threadsPerBlock - 1) / threadsPerBlock;
+    vector_add<<<blocksPerGrid, threadsPerBlock>>>(A, B, C, N);
     cudaDeviceSynchronize();
 
     float maxError = 0.0f;
@@ -65,9 +44,8 @@ int main(void){
 
 }
 
-
 /*
-// LeetGPU 2
+// LeetGPU 1
 // A, B, C are device pointers (i.e. pointers to memory on the GPU)
 extern "C" void solve(const float* A, const float* B, float* C, int M, int N, int K) {
     dim3 threadsPerBlock(16, 16);
